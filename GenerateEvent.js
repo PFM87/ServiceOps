@@ -35,11 +35,35 @@ function getRandomSeverity() {
   return severity[RandomIndex];
 }
 
-// Function to generate a random timestamp
+// Function to generate natural-looking timestamps with clusters and gaps
 function getRandomTimestamp() {
-    const now = new GlideDateTime();
-    now.subtract(Math.random() * 60 * 60 * 1000); // Subtract random milliseconds
-    return now;
+   const now = new GlideDateTime(); // Current time
+   const totalHours = 12; // Look back over the last 12 hours
+   const totalMilliseconds = totalHours * 60 * 60 * 1000; // Convert hours to milliseconds
+   // Define cluster and gap settings
+   const clusterDurationRange = [5 * 60 * 1000, 20 * 60 * 1000]; // Cluster lasts 5-20 minutes
+   const gapDurationRange = [10 * 60 * 1000, 45 * 60 * 1000]; // Gaps last 10-45 minutes
+   // Static reference for event clusters
+   if (!this.clusterStartTimes) {
+       this.clusterStartTimes = []; // Cache cluster start times
+       var timeOffset = 0;
+       // Generate clusters starting from now
+       while (timeOffset < totalMilliseconds) {
+           const clusterDuration = Math.random() * (clusterDurationRange[1] - clusterDurationRange[0]) + clusterDurationRange[0];
+           this.clusterStartTimes.push({
+               start: timeOffset,
+               end: timeOffset + clusterDuration
+           });
+           timeOffset += clusterDuration + Math.random() * (gapDurationRange[1] - gapDurationRange[0]) + gapDurationRange[0];
+       }
+   }
+   // Choose a random cluster
+   const randomCluster = this.clusterStartTimes[Math.floor(Math.random() * this.clusterStartTimes.length)];
+   const randomOffsetWithinCluster = Math.random() * (randomCluster.end - randomCluster.start);
+   // Subtract the offset from the current time
+   const offsetMilliseconds = randomCluster.start + randomOffsetWithinCluster;
+   now.subtract(offsetMilliseconds);
+   return now;
 }
 
 // Function to generate a random node value from node001 to node010
