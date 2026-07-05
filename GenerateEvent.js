@@ -14,8 +14,8 @@ function getRandomSeverity() {
     return severity[Math.floor(Math.random() * severity.length)];
 }
 
-// Function to get a random node (CI name) from a specific CMDB class
-function getRandomNodeFromCIClass(ciClass) {
+// Function to fetch CI names from a specific CMDB class (query once, reuse for every event)
+function getCiNamesFromClass(ciClass) {
    var ciNames = [];
    var gr = new GlideRecord(ciClass);
    gr.addQuery('operational_status', '1'); // Optional: Filter for operational CIs
@@ -25,9 +25,15 @@ function getRandomNodeFromCIClass(ciClass) {
    }
    if (ciNames.length === 0) {
        gs.error("No CIs found in class: " + ciClass);
-       return "default_node"; // Fallback if no CIs are found
    }
-   // Return a random CI name
+   return ciNames;
+}
+
+// Return a random CI name from an already-fetched list, falling back if empty
+function getRandomNodeFromCiNames(ciNames) {
+   if (ciNames.length === 0) {
+       return "default_node";
+   }
    return ciNames[Math.floor(Math.random() * ciNames.length)];
 }
 
@@ -53,10 +59,6 @@ function getRandomTimestamp() {
     return now;
 }
 
-function getRandomNode() {
-    return "node" + ("00" + (Math.floor(Math.random() * 10) + 1)).slice(-3); // Format as "node001", "node002", etc.
-}
-
 function getRandomResource() {
     return getRandomElement(resources); // Return a random resource
 }
@@ -75,6 +77,8 @@ function getRandomSource() {
     return 'Unknown'; // Fallback
 }
 
+var ciNames = getCiNamesFromClass(ciClass); // Query CIs once and reuse for every generated event
+
 for (var i = 1; i <= 1000; i++) {
    var gr = new GlideRecord('em_event');
    gr.initialize();
@@ -82,7 +86,7 @@ for (var i = 1; i <= 1000; i++) {
    gr.description = getRandomElement(descriptions); // Set random description
    gr.metric_name = getRandomElement(metricNames); // Set random metric name
    gr.severity = getRandomSeverity(); // Set random severity
-   gr.node = getRandomNodeFromCIClass(ciClass); // Get node (CI name) from the specified CMDB class
+   gr.node = getRandomNodeFromCiNames(ciNames); // Get node (CI name) from the specified CMDB class
    gr.time_of_event = getRandomTimestamp(); // Set time at random value
    gr.state = 'Ready';
    gr.type = getRandomElement(types); // Set random type
@@ -93,6 +97,4 @@ for (var i = 1; i <= 1000; i++) {
    gr.insert(); // Insert the record
 }
 
-//Use GlideRecord Bulk Operations
-GlideRecord.insertMultiple('em_event', grlist);
-gs.info("Bulk insert complete: " + stopwatch);
+gs.info("Insert complete: " + stopwatch);
